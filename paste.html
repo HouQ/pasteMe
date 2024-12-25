@@ -35,10 +35,15 @@
                           class="w-full h-32 p-2 border rounded" 
                           placeholder="在此输入或粘贴文本..."
                           @input="scheduleSave"></textarea>
-                <button @click="saveCurrentText" 
-                        class="mt-2 bg-blue-500 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded flex items-center justify-center">
-                    <i class="fas fa-save mr-2"></i>
-                    保存记录
+                <!-- 电脑端按钮 -->
+                <button v-if="!isMobile" @click="saveCurrentText" 
+                        class="ml-2 bg-blue-500 hover:bg-blue-700 text-white p-2 rounded-full w-10 h-10 flex items-center justify-center">
+                    <i class="fas fa-save"></i>
+                </button>
+                <!-- 移动端按钮 -->
+                <button v-if="isMobile" @click="saveCurrentText" 
+                        class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-blue-500 hover:bg-blue-700 text-white p-2 rounded-full w-10 h-10 flex items-center justify-center">
+                    <i class="fas fa-save"></i>
                 </button>
             </div>
             <div v-if="selectedDate">

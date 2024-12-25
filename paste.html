@@ -24,7 +24,7 @@
                 </li>
             </ul>
         </div>
-        <button v-if="isMobile && !showDateList" @click="toggleDateList" class="fixed bottom-4 right-4 bg-gray-300 text-gray-700 text-sm p-2 rounded-full shadow-lg">
+        <button v-if="isMobile" @click="toggleDateList" class="fixed bottom-4 right-4 bg-gray-300 text-gray-700 text-sm p-2 rounded-full shadow-lg">
             日
         </button>
 
@@ -35,6 +35,11 @@
                           class="w-full h-32 p-2 border rounded" 
                           placeholder="在此输入或粘贴文本..."
                           @input="scheduleSave"></textarea>
+                <button @click="saveCurrentText" 
+                        class="mt-2 bg-blue-500 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded flex items-center justify-center">
+                    <i class="fas fa-save mr-2"></i>
+                    保存记录
+                </button>
             </div>
             <div v-if="selectedDate">
                 <h2 class="text-base text-gray-600 mb-4">记录列表 ({{ selectedDate }})</h2>

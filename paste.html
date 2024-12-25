@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在线剪贴板</title>
+    <script src="/static/vue.global.js"></script>
+    <link rel="stylesheet" href="/static/tailwind.min.css">
+    <link rel="stylesheet" href="/static/font-aswsome.min.css">
+    <link rel="stylesheet" href="/static/notyf.min.css">
+    <script src="/static/notyf.min.js"></script>
+    <script src="/static/marked.min.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div id="app" class="flex flex-col md:flex-row">
+        <!-- 左边日期列表 -->
+        <div v-if="!isMobile || (isMobile && showDateList)" class="w-full md:w-1/4 bg-white p-4 shadow-md">
+            <h2 class="text-base text-gray-600 mb-4">日期列表</h2>
+            <ul>
+                <li v-for="date in dateList" :key="date" 
+                    class="cursor-pointer hover:bg-gray-200 p-2 rounded"
+                    @click="selectDate(date)">
+                    {{ date }}
+                </li>
+            </ul>
+        </div>
+        <button v-if="isMobile && !showDateList" @click="toggleDateList" class="fixed bottom-4 right-4 bg-gray-300 text-gray-700 text-sm p-2 rounded-full shadow-lg">
+            日
+        </button>
+
+        <!-- 右边当日记录 -->
+        <div class="w-full md:w-3/4 p-4">
+            <div v-if="isTodaySelected" class="mb-4">
+                <textarea v-model="currentText" 
+                          class="w-full h-32 p-2 border rounded" 
+                          placeholder="在此输入或粘贴文本..."
+                          @input="scheduleSave"></textarea>
+            </div>
+            <div v-if="selectedDate">
+                <h2 class="text-base text-gray-600 mb-4">记录列表 ({{ selectedDate }})</h2>
+                <ul>
+                    <li v-for="(record, index) in records" :key="index" 
+                        class="bg-white p-4 mb-4 shadow-md rounded">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm text-gray-500">{{ record.timestamp }}</span>
+                            <div>
+                                <button @click="copyToClipboard(record.text)" 
+                                        class="text-blue-500 hover:text-blue-700 mr-2">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                                <button @click="deleteRecord(index)" 
+                                        class="text-red-500 hover:text-red-700">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                <div class="text-gray-800" v-html="renderMarkdown(record.text)"></div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+        const notyf = new Notyf();
+
+        createApp({
+            data() {
+                return {
+                    dateList: [], // 日期列表
+                    selectedDate: new Date().toISOString().split('T')[0], // 当前选中的日期，默认为今日
+                    currentText: '', // 当前输入的文本
+                    records: [], // 当前日期的记录列表
+                    saveTimeout: null, // 保存定时器
+                    isFirstSave: true, // 首次保存标志
+                    isMobile: window.innerWidth <= 768, // 判断是否为手机端
+                    showDateList: false, // 是否显示日期列表
+                    isTodaySelected: true // 当前选中的日期是否为今日
+                };
+            },
+            methods: {
+                // 获取日期列表
+                async fetchDateList() {
+                    // 这里应该是从接口获取日期列表
+                    this.dateList = await fetch('/api/dates').then(res => res.json());
+                },
+                // 选择日期
+                async selectDate(date) {
+                    this.selectedDate = date;
+                    this.isTodaySelected = date === new Date().toISOString().split('T')[0];
+                    await this.fetchRecords(date);
+                },
+                // 获取某日的记录列表
+                async fetchRecords(date) {
+                    // 这里应该是从接口获取某日的记录列表
+                    this.records = await fetch(`/api/records?date=${date}`).then(res => res.json());
+                },
+                // 保存当前输入的文本
+                async saveCurrentText() {
+                    if (this.selectedDate && this.currentText.trim()) {
+                        const newRecord = {
+                            text: this.currentText,
+                            timestamp: new Date().toLocaleString()
+                        };
+                        // 这里应该是调用保存记录的接口
+                        if (this.isFirstSave) {
+                            // 首次保存，调用保存接口
+                            await fetch('/api/save', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ date: this.selectedDate, record: newRecord })
+                            });
+                            this.isFirstSave = false; // 设置为非首次保存
+                        } else {
+                            // 后续更新，调用更新接口
+                            await fetch('/api/update', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ date: this.selectedDate, record: newRecord })
+                            });
+                        }
+                        // this.records.push(newRecord);
+                        // 保存后不清空文本框
+                    }
+                },
+                // 删除记录
+                async deleteRecord(index) {
+                    const record = this.records[index];
+                    // 这里应该是调用删除记录的接口
+                    await fetch('/api/delete', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ date: this.selectedDate, record })
+                    });
+                    this.records.splice(index, 1);
+                },
+                // 复制到剪贴板
+                copyToClipboard(text) {
+                    navigator.clipboard.writeText(text).then(() => {
+                        notyf.success('已复制到剪贴板');
+                    });
+                },
+                renderMarkdown(text) {
+                    return marked.parse(text);
+                },
+                // 调度保存
+                scheduleSave() {
+                    clearTimeout(this.saveTimeout);
+                    this.saveTimeout = setTimeout(() => {
+                        this.saveCurrentText();
+                    }, 1000); // 1秒后保存
+                },
+                toggleDateList() {
+                    this.showDateList = !this.showDateList;
+                }
+            },
+            mounted() {
+                this.fetchDateList();
+                this.fetchRecords(this.selectedDate);
+                window.addEventListener('resize', () => {
+                    this.isMobile = window.innerWidth <= 768; // 监听窗口大小变化，更新isMobile
+                });
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

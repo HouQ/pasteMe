@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,60 +12,57 @@
     <script src="/static/notyf.min.js"></script>
     <script src="/static/marked.min.js"></script>
 </head>
+
 <body class="bg-gray-100">
     <div id="app" class="flex flex-col md:flex-row">
         <!-- 左边日期列表 -->
         <div v-if="!isMobile || (isMobile && showDateList)" class="w-full md:w-1/4 bg-white p-4 shadow-md">
             <h2 class="text-base text-gray-600 mb-4">日期列表</h2>
             <ul>
-                <li v-for="date in dateList" :key="date" 
-                    class="cursor-pointer hover:bg-gray-200 p-2 rounded"
+                <li v-for="date in dateList" :key="date" class="cursor-pointer hover:bg-gray-200 p-2 rounded"
                     @click="selectDate(date)">
                     {{ date }}
                 </li>
             </ul>
         </div>
-        <button v-if="isMobile" @click="toggleDateList" class="fixed bottom-4 right-4 bg-gray-300 text-gray-700 text-sm p-2 rounded-full shadow-lg">
+        <button v-if="isMobile" @click="toggleDateList"
+            class="fixed bottom-4 right-4 bg-gray-300 text-gray-700 text-sm p-2 rounded-full shadow-lg">
             日
         </button>
 
         <!-- 右边当日记录 -->
         <div class="w-full md:w-3/4 p-4">
             <div v-if="isTodaySelected" class="mb-4">
-                <textarea v-model="currentText" 
-                          class="w-full h-32 p-2 border rounded" 
-                          placeholder="在此输入或粘贴文本..."
-                          @input="scheduleSave"></textarea>
+                <textarea v-model="currentText" class="w-full h-32 p-2 border rounded" placeholder="在此输入或粘贴文本..."
+                    @input="scheduleSave"></textarea>
                 <!-- 电脑端按钮 -->
-                <button v-if="!isMobile" @click="saveCurrentText" 
-                        class="ml-2 bg-blue-500 hover:bg-blue-700 text-white p-2 rounded-full w-10 h-10 flex items-center justify-center">
+                <button v-if="!isMobile" @click="saveCurrentText"
+                    class="ml-2 bg-blue-500 hover:bg-blue-700 text-white p-2 rounded-full w-10 h-10 flex items-center justify-center">
                     <i class="fas fa-save"></i>
                 </button>
                 <!-- 移动端按钮 -->
-                <button v-if="isMobile" @click="saveCurrentText" 
-                        class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-blue-500 hover:bg-blue-700 text-white p-2 rounded-full w-10 h-10 flex items-center justify-center">
+                <button v-if="isMobile" @click="saveCurrentText"
+                    class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-blue-500 hover:bg-blue-700 text-white p-2 rounded-full w-10 h-10 flex items-center justify-center">
                     <i class="fas fa-save"></i>
                 </button>
             </div>
             <div v-if="selectedDate">
                 <h2 class="text-base text-gray-600 mb-4">记录列表 ({{ selectedDate }})</h2>
                 <ul>
-                    <li v-for="(record, index) in records" :key="index" 
-                        class="bg-white p-4 mb-4 shadow-md rounded">
+                    <li v-for="(record, index) in records" :key="index" class="bg-white p-4 mb-4 shadow-md rounded">
                         <div class="flex justify-between items-center mb-2">
                             <span class="text-sm text-gray-500">{{ record.timestamp }}</span>
                             <div>
-                                <button @click="copyToClipboard(record.text)" 
-                                        class="text-blue-500 hover:text-blue-700 mr-2">
+                                <button @click="copyToClipboard(record.text)"
+                                    class="text-blue-500 hover:text-blue-700 mr-2">
                                     <i class="fas fa-copy"></i>
                                 </button>
-                                <button @click="deleteRecord(index)" 
-                                        class="text-red-500 hover:text-red-700">
+                                <button @click="deleteRecord(index)" class="text-red-500 hover:text-red-700">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
                         </div>
-                <div class="text-gray-800" v-html="renderMarkdown(record.text)"></div>
+                        <div class="text-gray-800" v-html="renderMarkdown(record.text)"></div>
                     </li>
                 </ul>
             </div>
@@ -86,7 +84,8 @@
                     isFirstSave: true, // 首次保存标志
                     isMobile: window.innerWidth <= 768, // 判断是否为手机端
                     showDateList: false, // 是否显示日期列表
-                    isTodaySelected: true // 当前选中的日期是否为今日
+                    isTodaySelected: true, // 当前选中的日期是否为今日
+                    newRecord:{}
                 };
             },
             methods: {
@@ -109,29 +108,30 @@
                 // 保存当前输入的文本
                 async saveCurrentText() {
                     if (this.selectedDate && this.currentText.trim()) {
-                        const newRecord = {
-                            text: this.currentText,
-                            timestamp: new Date().toLocaleString()
-                        };
+
                         // 这里应该是调用保存记录的接口
                         if (this.isFirstSave) {
+                             this.newRecord = {
+                                text: this.currentText,
+                                timestamp: Date.now()
+                            };
                             // 首次保存，调用保存接口
                             await fetch('/api/save', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ date: this.selectedDate, record: newRecord })
+                                body: JSON.stringify({ date: this.selectedDate, record: this.newRecord })
                             });
                             this.isFirstSave = false; // 设置为非首次保存
                         } else {
                             // 后续更新，调用更新接口
+                            this.newRecord.text = this.currentText;
                             await fetch('/api/update', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ date: this.selectedDate, record: newRecord })
+                                body: JSON.stringify({ date: this.selectedDate, record: this.newRecord })
                             });
                         }
-                        // this.records.push(newRecord);
-                        // 保存后不清空文本框
+                        this.fetchRecords(this.selectedDate); // 重新获取记录列表
                     }
                 },
                 // 删除记录
@@ -146,10 +146,14 @@
                     this.records.splice(index, 1);
                 },
                 // 复制到剪贴板
-                copyToClipboard(text) {
-                    navigator.clipboard.writeText(text).then(() => {
-                        notyf.success('已复制到剪贴板');
-                    });
+                async copyToClipboard(text) {
+                    try {
+                        await navigator.clipboard.writeText(text);
+                        notyf.success('复制成功');
+                    } catch (err) {
+                        console.error('复制失败:', err);
+                        alert('复制失败，请手动选择文本复制');
+                    }
                 },
                 renderMarkdown(text) {
                     return marked.parse(text);
@@ -174,5 +178,3 @@
             }
         }).mount('#app');
     </script>
-</body>
-</html>

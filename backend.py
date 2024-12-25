@@ -75,8 +75,8 @@ def update_record():
     record = data['record']
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('UPDATE records SET text = ?, timestamp = ? WHERE date = ? AND text = ?', 
-                   (record['text'], record['timestamp'], date, record['text']))
+    cursor.execute('UPDATE records SET text = ? WHERE date = ? AND timestamp = ?', 
+                   (record['text'],  date, record['timestamp']))
     conn.commit()
     conn.close()
     return jsonify({'status': 'success'})

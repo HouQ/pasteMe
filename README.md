@@ -1,71 +1,104 @@
-# pasteMe - 在线剪贴板应用
+# 生产环境部署指南
 
-## 项目简介
-pasteMe是一个简单的在线剪贴板应用，允许用户按日期保存和管理文本记录。支持Markdown语法渲染，适合用于个人笔记、代码片段保存等场景。
+## 1. 安装依赖
+```bash
+# 安装Python虚拟环境
+sudo apt-get install python3-venv
 
-## 主要功能
-- 按日期组织文本记录
-- 支持文本输入和自动保存
-- 提供复制和删除记录功能
-- 支持Markdown语法渲染
-- 响应式设计，适配移动端和桌面端
+# 创建并激活虚拟环境
+python3 -m venv venv
+source venv/bin/activate
 
-## 技术栈
-### 前端
-- Vue.js
-- Tailwind CSS
-- Font Awesome
-- Notyf
-- marked.js
+# 安装项目依赖
+pip install -r requirements.txt
 
-### 后端
-- Flask
-- SQLite
+# 安装Gunicorn
+pip install gunicorn
 
-## 项目结构
-```
-pasteMe/
-├── backend.py         # Flask后端服务
-├── paste.html         # 前端页面
-├── paste.db           # SQLite数据库
-├── README.md          # 项目说明文件
-├── static/            # 前端静态资源
-│   ├── font-aswsome.min.css
-│   ├── marked.min.js
-│   ├── notyf.min.css
-│   ├── notyf.min.js
-│   ├── tailwind.min.css
-│   └── vue.global.js
-└── webfonts/          # 字体文件
-    ├── fa-brands-400.ttf
-    ├── fa-brands-400.woff2
-    ├── fa-regular-400.ttf
-    ├── fa-regular-400.woff2
-    ├── fa-solid-900.ttf
-    └── fa-solid-900.woff2
+# 安装Nginx
+sudo apt-get install nginx
 ```
 
-## 使用说明
-1. 安装依赖：
-   ```bash
-   pip install flask
-   ```
+## 2. 配置应用
+```bash
+# 复制配置文件
+sudo cp nginx.conf /etc/nginx/sites-available/pasteMe
 
-2. 启动服务：
-   ```bash
-   python backend.py
-   ```
+# 创建符号链接
+sudo ln -s /etc/nginx/sites-available/pasteMe /etc/nginx/sites-enabled/
 
-3. 访问应用：
-   打开浏览器，访问 `http://localhost:5000`
+# 测试Nginx配置
+sudo nginx -t
 
-4. 使用说明：
-   - 在文本框中输入或粘贴内容，系统会自动保存
-   - 点击日期查看历史记录
-   - 点击复制按钮将内容复制到剪贴板
-   - 点击删除按钮删除记录
+# 重启Nginx
+sudo systemctl restart nginx
+```
 
-## 注意事项
-- 首次运行会自动创建数据库文件 `paste.db`
-- 确保端口5000未被占用
-- 建议在本地开发环境中使用
+## 3. 启动应用
+```bash
+# 在虚拟环境中启动应用
+gunicorn -c gunicorn_config.py backend:app
+
+# 或者以后台模式运行
+gunicorn -c gunicorn_config.py --daemon backend:app
+```
+
+## 4. 设置开机启动
+```bash
+# 创建systemd服务文件
+sudo nano /etc/systemd/system/pasteMe.service
+
+# 添加以下内容：
+[Unit]
+Description=PasteMe Application
+After=network.target
+
+[Service]
+User=your_user
+WorkingDirectory=/workspaces/pasteMe
+ExecStart=/workspaces/pasteMe/venv/bin/gunicorn -c gunicorn_config.py backend:app
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+# 保存后启用并启动服务
+sudo systemctl enable pasteMe
+sudo systemctl start pasteMe
+
+# 查看服务状态
+sudo systemctl status pasteMe
+```
+
+## 5. 访问应用
+1. 确保防火墙允许HTTP流量：
+```bash
+sudo ufw allow 'Nginx Full'
+```
+
+2. 在浏览器中访问：
+```
+http://your_server_ip
+```
+
+## 6. 常见问题排查
+1. 查看Gunicorn日志：
+```bash
+journalctl -u pasteMe.service
+```
+
+2. 查看Nginx错误日志：
+```bash
+sudo tail -f /var/log/nginx/error.log
+```
+
+3. 检查端口占用：
+```bash
+sudo netstat -tuln | grep ':5000\|:80'
+```
+
+4. 重启服务：
+```bash
+sudo systemctl restart pasteMe
+sudo systemctl restart nginx
+```

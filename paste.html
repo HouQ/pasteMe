@@ -77,7 +77,7 @@
             data() {
                 return {
                     dateList: [], // 日期列表
-                    selectedDate: new Date().toISOString().split('T')[0], // 当前选中的日期，默认为今日
+                    selectedDate: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().split('T')[0], // 当前选中的日期，默认为今日（东八区）
                     currentText: '', // 当前输入的文本
                     records: [], // 当前日期的记录列表
                     saveTimeout: null, // 保存定时器
